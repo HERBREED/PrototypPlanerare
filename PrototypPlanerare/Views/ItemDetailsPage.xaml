@@ -1,0 +1,1310 @@
+<Page
+    x:Class="PrototypPlanerare.Views.ItemDetailsPage"
+    x:Name="PageRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:PrototypPlanerare.Models"
+    xmlns:conv="using:PrototypPlanerare.Converters"
+    mc:Ignorable="d"
+    RequestedTheme="Light"
+    x:DataType="models:Item">
+
+    <!-- =====================  Resources  ===================== -->
+    <Page.Resources>
+
+        <!-- Converters -->
+        <conv:DateTimeToStringConverter         x:Key="DateTimeToStringConverter"/>
+        <conv:BoolToYesNoConverter              x:Key="BoolToYesNoConverter"/>
+        <conv:DateTimeToOffsetConverter         x:Key="DateToOffsetConverter"/>
+        <conv:EngStatusToBrushConverter         x:Key="EngStatusBrush"/>
+        <conv:BoolToWaitingReceivedConverter    x:Key="BoolToWaitingReceivedConverter"/>
+        <conv:BoolToOkNok                       x:Key="BoolToOkNok"/>
+
+        <!-- READ mode labels/values (tight) -->
+        <Style x:Key="RowCellText" TargetType="TextBlock">
+            <Setter Property="MinHeight" Value="20"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- EDIT mode: labels (left column) -->
+        <Style x:Key="RowLabelEdit" TargetType="TextBlock">
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- EDIT mode: editors (right column) -->
+        <Style x:Key="RowEditorBase" TargetType="Control">
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="5,0,5,0"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- AutoSuggestBox internal TextBox alignment -->
+        <Style x:Key="AutoSuggestInnerTextBoxStyle" TargetType="TextBox">
+            <Setter Property="TextAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Page.Resources -->
+        <DataTemplate x:Key="EngReadTemplate" x:DataType="models:EngineeringTask">
+            <Grid ColumnSpacing="32" Padding="0,2" HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!--    Task Title  -->
+                <TextBlock Text="{x:Bind Title}" />
+
+                <!-- Colored status pill -->
+                <Border Grid.Column="1"
+                HorizontalAlignment="Left"
+                MinWidth="110"
+                Padding="10,2"
+                CornerRadius="12"
+                Background="{x:Bind Status, Converter={StaticResource EngStatusBrush}, ConverterParameter=bg}"
+                BorderBrush="{x:Bind Status, Converter={StaticResource EngStatusBrush}, ConverterParameter=border}"
+                BorderThickness="1"
+                VerticalAlignment="Center"
+                Margin="24,0,0,0">
+                    <TextBlock Text="{x:Bind Status}"
+                       Foreground="{Binding Status, Converter={StaticResource EngStatusBrush}, ConverterParameter=fg}"/>
+                </Border>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="EngEditTemplate" x:DataType="models:EngineeringTask">
+            <Grid ColumnSpacing="32" Padding="0,2" HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="{x:Bind Title}" />
+
+                <ComboBox Grid.Column="1"
+                  MinWidth="160"
+                  HorizontalAlignment="Right"
+                  ItemsSource="{Binding ElementName=PageRoot, Path=EngineeringStatusOptions}"
+                  SelectedItem="{x:Bind Status, Mode=TwoWay}" />
+            </Grid>
+        </DataTemplate>
+
+    </Page.Resources>
+
+    <!-- =====================  Layout  ===================== -->
+    <Grid Padding="16" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header: Back | gap | "Item details — {Product}" | Edit/Save/Cancel -->
+        <Grid Grid.Row="0" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Back (chevron) -->
+            <Button Grid.Column="0" Style="{StaticResource OutlineButton}" Click="Back_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Viewbox Width="16" Height="16">
+                        <Canvas Width="16" Height="16">
+                            <Path Stroke="{ThemeResource TextFillColorPrimaryBrush}"
+                                  StrokeThickness="1"
+                                  StrokeLineJoin="Round"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Data="M 10,2 L 4,8 L 10,14"/>
+                        </Canvas>
+                    </Viewbox>
+                    <TextBlock Text="Back"/>
+                </StackPanel>
+            </Button>
+
+            <!-- Title -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock Text="Item details" FontSize="20" FontWeight="SemiBold"/>
+                <TextBlock Text="—" Opacity="0.6" FontSize="20"/>
+                <TextBlock Text="{Binding Product}" FontSize="20" TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+
+            <!-- Right: action buttons -->
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button x:Name="EditButton" Style="{StaticResource PrimaryButton}" Click="Edit_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <SymbolIcon Symbol="Edit"/>
+                        <TextBlock Text="Edit"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Visibility="Collapsed" Click="Save_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <SymbolIcon Symbol="Save"/>
+                        <TextBlock Text="Save"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="CancelButton" Style="{StaticResource OutlineButton}" Visibility="Collapsed" Click="Cancel_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <SymbolIcon Symbol="Cancel"/>
+                        <TextBlock Text="Cancel"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Tabs -->
+        <Border Grid.Row="1"
+                Background="{StaticResource HeaderBrush}"
+                CornerRadius="8"
+                Padding="4"
+                BorderBrush="{StaticResource DividerBrush}"
+                BorderThickness="1">
+
+            <TabView 
+                x:Name="Tabs"
+                IsAddTabButtonVisible="False" 
+                TabWidthMode="SizeToContent">
+
+                <!-- ========== Overview ========== -->
+                <TabViewItem Header="Overview" IsClosable="False">
+                    <ScrollViewer>
+                        <Border Background="{StaticResource CardBrush}"
+                                CornerRadius="12"
+                                BorderBrush="{StaticResource DividerBrush}"
+                                BorderThickness="1"
+                                Padding="16"
+                                HorizontalAlignment="Stretch">
+                            <Grid MaxWidth="1200">
+
+                                <!-- READ VIEW -->
+                                <Grid x:Name="ReadView" ColumnSpacing="16" RowSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- rows 0..11 -->
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 0 Date -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 1 ECO -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 2 ÅO -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 3 Customer -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 4 Product -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 5 Current Rev -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 6 New Rev -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 7 Quantity -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 8 Type -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 9 Status -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 10 Owner -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 11 Notes -->
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Labels -->
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="0"  Grid.Column="0" Text="Date"        FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="1"  Grid.Column="0" Text="ECO"         FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="2"  Grid.Column="0" Text="ÅO"          FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="3"  Grid.Column="0" Text="Customer"    FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="4"  Grid.Column="0" Text="Product"     FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="5"  Grid.Column="0" Text="Current Rev" FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="6"  Grid.Column="0" Text="New Rev"     FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="7"  Grid.Column="0" Text="Quantity"    FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="8"  Grid.Column="0" Text="Type"        FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="9"  Grid.Column="0" Text="Status"      FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="10" Grid.Column="0" Text="Owner"       FontWeight="SemiBold"/>
+                                    <TextBlock                                        Grid.Row="11" Grid.Column="0" Text="Notes"     FontWeight="SemiBold"/>
+
+                                    <!-- Values -->
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="0"  Grid.Column="1"
+                                               Text="{Binding Date, Converter={StaticResource DateTimeToStringConverter}}"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="1"  Grid.Column="1" Text="{Binding EcoNumber}"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="2"  Grid.Column="1" Text="{Binding AoNumber}"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="3"  Grid.Column="1" Text="{Binding Customer}"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="4"  Grid.Column="1" Text="{Binding Product}"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="5"  Grid.Column="1" Text="{Binding CurrentRevision}"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="6"  Grid.Column="1" Text="{Binding NewRevision}"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="7"  Grid.Column="1" Text="{Binding Quantity}"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="8"  Grid.Column="1" Text="{Binding Type}"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="9"  Grid.Column="1" Text="{Binding Status}"/>
+                                    <TextBlock Style="{StaticResource RowCellText}" Grid.Row="10" Grid.Column="1" Text="{Binding CreatedBy}"/>
+
+                                    <!-- Notes: comments list + add box -->
+                                    <StackPanel Grid.Row="11" Grid.Column="1" Spacing="8" Margin="0,8,0,24">
+                                        <ListView ItemsSource="{x:Bind OverviewComments}" SelectionMode="None">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate x:DataType="models:ItemComment">
+                                                    <Border Background="{StaticResource RowBrush}"
+                                                            CornerRadius="8"
+                                                            Padding="10"
+                                                            Margin="0,6,0,0"
+                                                            BorderBrush="{StaticResource DividerBrush}"
+                                                            BorderThickness="1">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock>
+                                                                    <Run Text="{x:Bind Author}"/>
+                                                                    <Run Text=" · "/>
+                                                                    <Run Text="{x:Bind CreatedAt, Converter={StaticResource DateTimeToStringConverter}}"/>
+                                                                </TextBlock>
+                                                                <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap"/>
+                                                            </StackPanel>
+
+                                                            <Button Grid.Column="1"
+                                                                    Click="DeleteComment_Click"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Center"
+                                                                    ToolTipService.ToolTip="Delete">
+                                                                <SymbolIcon Symbol="Delete"/>
+                                                            </Button>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBox x:Name="NewCommentBox"
+                                                     PlaceholderText="Add a comment..."
+                                                     Width="600"
+                                                     AcceptsReturn="True"
+                                                     TextWrapping="Wrap"/>
+
+                                            <Button Style="{StaticResource PrimaryButton}" Click="AddComment_Click">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <SymbolIcon Symbol="Add"/>
+                                                    <TextBlock Text="Add"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Dividers under the fixed rows -->
+                                    <Rectangle Grid.Row="0"  Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                    <Rectangle Grid.Row="1"  Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                    <Rectangle Grid.Row="2"  Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                    <Rectangle Grid.Row="3"  Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                    <Rectangle Grid.Row="4"  Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                    <Rectangle Grid.Row="5"  Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                    <Rectangle Grid.Row="6"  Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                    <Rectangle Grid.Row="7"  Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                    <Rectangle Grid.Row="8"  Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                    <Rectangle Grid.Row="9"  Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                    <Rectangle Grid.Row="10" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0" Canvas.ZIndex="1"/>
+                                </Grid>
+
+                                <!-- EDIT VIEW -->
+                                <Grid x:Name="EditView" ColumnSpacing="16" RowSpacing="8" Visibility="Collapsed">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- rows 0..11 -->
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 0 Date -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 1 ECO -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 2 ÅO -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 3 Customer -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 4 Product -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 5 Current Rev -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 6 New Rev -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 7 Quantity -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 8 Type -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 9 Status -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 10 Owner -->
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- 11 Notes (hint) -->
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Labels -->
+                                    <TextBlock Grid.Row="0"  Grid.Column="0" Text="Date"        FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="1"  Grid.Column="0" Text="ECO"         FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="2"  Grid.Column="0" Text="ÅO"          FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="3"  Grid.Column="0" Text="Customer"    FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="4"  Grid.Column="0" Text="Product"     FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="5"  Grid.Column="0" Text="Current Rev" FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="6"  Grid.Column="0" Text="New Rev"     FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="7"  Grid.Column="0" Text="Quantity"    FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="8"  Grid.Column="0" Text="Type"        FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="9"  Grid.Column="0" Text="Status"      FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="10" Grid.Column="0" Text="Owner"       FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+                                    <TextBlock Grid.Row="11" Grid.Column="0" Text="Notes"       FontWeight="SemiBold" Style="{StaticResource RowLabelEdit}"/>
+
+                                    <!-- Editors -->
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Date}" Style="{StaticResource RowEditorBase}"/>
+
+                                    <TextBox  Grid.Row="1" Grid.Column="1" Style="{StaticResource RowEditorBase}"
+                                              Text="{Binding EcoNumber,       Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox  Grid.Row="2" Grid.Column="1" Style="{StaticResource RowEditorBase}"
+                                              Text="{Binding AoNumber,        Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox  Grid.Row="3" Grid.Column="1" Style="{StaticResource RowEditorBase}"
+                                              Text="{Binding Customer,        Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox  Grid.Row="4" Grid.Column="1" Style="{StaticResource RowEditorBase}"
+                                              Text="{Binding Product,         Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox  Grid.Row="5" Grid.Column="1" Style="{StaticResource RowEditorBase}"
+                                              Text="{Binding CurrentRevision, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox  Grid.Row="6" Grid.Column="1" Style="{StaticResource RowEditorBase}"
+                                              Text="{Binding NewRevision,     Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                    <NumberBox x:Name="QtyBox" Grid.Row="7" Grid.Column="1" Style="{StaticResource RowEditorBase}"
+                                               Minimum="0" SmallChange="1" LargeChange="5"
+                                               SpinButtonPlacementMode="Inline"
+                                               Value="{Binding Quantity, Mode=TwoWay}"
+                                               ValueChanged="QtyBox_ValueChanged"/>
+
+                                    <ComboBox Grid.Row="8" Grid.Column="1" Style="{StaticResource RowEditorBase}"
+                                              SelectedItem="{Binding Type, Mode=TwoWay}">
+                                        <x:String>ECO</x:String>
+                                        <x:String>PROTOTYPE</x:String>
+                                        <x:String>OTHER</x:String>
+                                    </ComboBox>
+
+                                    <ComboBox Grid.Row="9" Grid.Column="1" Style="{StaticResource RowEditorBase}"
+                                              SelectedItem="{Binding Status, Mode=TwoWay}">
+                                        <x:String>NotStarted</x:String>
+                                        <x:String>InProgress</x:String>
+                                        <x:String>Blocked</x:String>
+                                        <x:String>Done</x:String>
+                                    </ComboBox>
+
+                                    <!-- Owner (AutoSuggestBox) -->
+                                    <AutoSuggestBox x:Name="OwnerBox"
+                                                    Grid.Row="10" Grid.Column="1"
+                                                    Style="{StaticResource RowEditorBase}"
+                                                    TextBoxStyle="{StaticResource AutoSuggestInnerTextBoxStyle}"
+                                                    PlaceholderText="Type a name..."
+                                                    Text="{Binding CreatedBy, Mode=TwoWay}"
+                                                    ItemsSource="{x:Bind OwnerSuggestions, Mode=OneWay}"
+                                                    TextChanged="OwnerBox_TextChanged"
+                                                    SuggestionChosen="OwnerBox_SuggestionChosen"
+                                                    QuerySubmitted="OwnerBox_QuerySubmitted"
+                                                    LostFocus="OwnerBox_LostFocus"/>
+
+                                    <!-- Notes hint -->
+                                    <TextBlock Grid.Row="11" Grid.Column="1" Style="{StaticResource RowEditorBase}"
+                                               Text="Add comments in view mode (Notes row)."
+                                               Opacity="0.7" TextWrapping="Wrap"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </ScrollViewer>
+                </TabViewItem>
+
+                <!-- ========== Market ========== -->
+                <TabViewItem Header="Market" IsClosable="False">
+                    <ScrollViewer>
+                        <Border Background="{StaticResource CardBrush}"
+                                CornerRadius="12"
+                                BorderBrush="{StaticResource DividerBrush}"
+                                BorderThickness="1"
+                                Padding="16"
+                                HorizontalAlignment="Stretch"
+                                Margin="0">
+                            <!-- Same layout as Overview: 220 label / * value -->
+                            <Grid MaxWidth="1200" ColumnSpacing="16" RowSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 0 Kickoff -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 1 Quote no -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 2 Quoted -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 3 Approved -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 4 Owner -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 5 Notes -->
+                                </Grid.RowDefinitions>
+
+                                <!-- Labels -->
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Uppstartsmöte (Datum)" Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Offertnummer"          Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Offererad"             Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Offertstatus"          Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Owner"                 Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Notes"                 FontWeight="SemiBold"/>
+
+                                <!-- READ values -->
+                                <TextBlock x:Name="MarketRead_Kickoff"
+                                           Grid.Row="0" Grid.Column="1"
+                                           Text="{Binding MarketKickoffDate, Converter={StaticResource DateTimeToStringConverter}}"
+                                           Style="{StaticResource RowCellText}"/>
+                                <TextBlock x:Name="MarketRead_QuoteNo"
+                                           Grid.Row="1" Grid.Column="1"
+                                           Text="{Binding MarketQuoteNumber}"
+                                           Style="{StaticResource RowCellText}"/>
+                                <TextBlock x:Name="MarketRead_Quoted"
+                                           Grid.Row="2" Grid.Column="1"
+                                           Text="{Binding MarketQuoted, Converter={StaticResource BoolToYesNoConverter}}"
+                                           Style="{StaticResource RowCellText}"/>
+                                <TextBlock x:Name="MarketRead_Approved"
+                                           Grid.Row="3" Grid.Column="1"
+                                           Text="{Binding MarketQuoteApproved, Converter={StaticResource BoolToOkNok }}"
+                                           Style="{StaticResource RowCellText}"/>
+                                <TextBlock x:Name="MarketRead_Owner"
+                                           Grid.Row="4" Grid.Column="1"
+                                           Text="{Binding MarketOwner}"
+                                           Style="{StaticResource RowCellText}"/>
+
+                                <!-- EDIT controls -->
+                                <DatePicker x:Name="MarketEdit_Kickoff"
+                                            Grid.Row="0" Grid.Column="1"
+                                            Date="{Binding MarketKickoffDate, Mode=TwoWay, Converter={StaticResource DateToOffsetConverter}}"
+                                            Visibility="Collapsed"
+                                            MinHeight="30"/>
+                                <TextBox x:Name="MarketEdit_QuoteNo"
+                                         Grid.Row="1" Grid.Column="1"
+                                         Text="{Binding MarketQuoteNumber, Mode=TwoWay}"
+                                         Visibility="Collapsed"
+                                         Style="{StaticResource RowEditorBase}"/>
+                                <ToggleSwitch x:Name="MarketEdit_Quoted"
+                                              Grid.Row="2" Grid.Column="1"
+                                              IsOn="{Binding MarketQuoted, Mode=TwoWay}"
+                                              OnContent="Ja" OffContent="Nej"
+                                              Visibility="Collapsed"/>
+                                <ToggleSwitch x:Name="MarketEdit_Approved"
+                                              Grid.Row="3" Grid.Column="1"
+                                              IsOn="{Binding MarketQuoteApproved, Mode=TwoWay}"
+                                              OnContent="Godkänd" OffContent="Ej godkänd"
+                                              Visibility="Collapsed"/>
+                                <AutoSuggestBox x:Name="MarketEdit_Owner"
+                                                Grid.Row="4" Grid.Column="1"
+                                                Text="{Binding MarketOwner, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                PlaceholderText="Type a name..."
+                                                ItemsSource="{x:Bind OwnerSuggestions, Mode=OneWay}"
+                                                TextChanged="OwnerBox_TextChanged"
+                                                SuggestionChosen="OwnerBox_SuggestionChosen"
+                                                QuerySubmitted="OwnerBox_QuerySubmitted"
+                                                LostFocus="OwnerBox_LostFocus"
+                                                Visibility="Collapsed"/>
+
+                                <!-- Edit-mode hint (hidden in read mode) -->
+                                <TextBlock x:Name="MarketNotesHint"
+           Grid.Row="5" Grid.Column="1"
+           Text="Add comments in view mode (Notes row)."
+           Visibility="Collapsed"
+           Opacity="0.7"
+           Style="{StaticResource RowEditorBase}"/>
+
+                                <!-- Notes (thread) -->
+                                <StackPanel x:Name="MarketNotesPanel" Grid.Row="5" Grid.Column="1" Spacing="8" Margin="0,8,0,24">
+                                    <ListView ItemsSource="{x:Bind MarketComments}" SelectionMode="None">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate x:DataType="models:ItemComment">
+                                                <Border Background="{StaticResource RowBrush}"
+                                                        CornerRadius="8"
+                                                        Padding="10"
+                                                        Margin="0,6,0,0"
+                                                        BorderBrush="{StaticResource DividerBrush}"
+                                                        BorderThickness="1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Spacing="4">
+                                                            <TextBlock>
+                                                                <Run Text="{x:Bind Author}"/>
+                                                                <Run Text=" · "/>
+                                                                <Run Text="{x:Bind CreatedAt, Converter={StaticResource DateTimeToStringConverter}}"/>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+
+                                                        <Button Grid.Column="1"
+                                                                Click="DeleteComment_Click"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Center"
+                                                                ToolTipService.ToolTip="Delete">
+                                                            <SymbolIcon Symbol="Delete"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+
+                                    <!-- Add comment -->
+                                    <StackPanel x:Name="MarketAddRow" Orientation="Horizontal" Spacing="8">
+                                        <TextBox x:Name="MarketNewCommentBox"
+                                                 PlaceholderText="Add a comment..."
+                                                 Width="600"
+                                                 AcceptsReturn="True"
+                                                 TextWrapping="Wrap"/>
+                                        <Button Style="{StaticResource PrimaryButton}"
+                                                Click="AddMarketComment_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <SymbolIcon Symbol="Add"/>
+                                                <TextBlock Text="Add"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Row dividers -->
+                                <Rectangle x:Name="MktSep0" Grid.Row="0" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="MktSep1" Grid.Row="1" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="MktSep2" Grid.Row="2" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="MktSep3" Grid.Row="3" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="MktSep4" Grid.Row="4" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                            </Grid>
+                        </Border>
+                    </ScrollViewer>
+                </TabViewItem>
+
+                <!-- ========== Engineering ========== -->
+                <TabViewItem Header="Engineering" IsClosable="False">
+                    <ScrollViewer>
+                        <Border Background="{StaticResource CardBrush}"
+            CornerRadius="12"
+            BorderBrush="{StaticResource DividerBrush}"
+            BorderThickness="1"
+            Padding="16"
+            HorizontalAlignment="Stretch">
+
+                            <!-- 220 / * layout; TWO rows: Tasks (0) and Notes (1) -->
+                            <Grid MaxWidth="1200" ColumnSpacing="16" RowSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 0: Tasks -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 1: Notes -->
+                                </Grid.RowDefinitions>
+
+                                <!-- Tasks -->
+                                <TextBlock Grid.Row="0" Grid.Column="0"
+                                            Text="Tasks"
+                                            FontWeight="SemiBold"
+                                            VerticalAlignment="Top"/>
+                                
+                                <ListView x:Name="EngineeringList"
+                                            Grid.Row="0" Grid.Column="1"
+                                            ItemsSource="{x:Bind EngineeringTasks}"
+                                            SelectionMode="None"
+                                            ItemTemplate="{StaticResource EngReadTemplate}"
+                                            Padding="0"
+                                            BorderThickness="0"
+                                            VerticalAlignment="Top"
+                                            Margin="0,-4,0,0">
+                                    <ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                            <Setter Property="Padding" Value="0,6"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="Background" Value="Transparent"/>
+                                        </Style>
+                                    </ListView.ItemContainerStyle>
+                                </ListView>
+
+                                <!-- Notes label -->
+                                <TextBlock Grid.Row="1" Grid.Column="0"
+                                            Text="Notes"
+                                            FontWeight="SemiBold"
+                                            VerticalAlignment="Top"/>
+
+                                <!-- Notes thread -->
+                                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="8" Margin="0,8,0,24">
+                                    <ListView ItemsSource="{x:Bind EngineeringComments}" SelectionMode="None">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate x:DataType="models:ItemComment">
+                                                <Border Background="{StaticResource RowBrush}"
+                                                        CornerRadius="8"
+                                                        Padding="10"
+                                                        Margin="0,6,0,0"
+                                                        BorderBrush="{StaticResource DividerBrush}"
+                                                        BorderThickness="1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Spacing="4">
+                                                            <TextBlock>
+                                                                <Run Text="{x:Bind Author}"/>
+                                                                <Run Text=" · "/>
+                                                                <Run Text="{x:Bind CreatedAt, Converter={StaticResource DateTimeToStringConverter}}"/>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+
+                                                        <Button Grid.Column="1"
+                                                                Click="DeleteComment_Click"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Center"
+                                                                ToolTipService.ToolTip="Delete">
+                                                            <SymbolIcon Symbol="Delete"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+
+                                    <!-- Add comment row -->
+                                    <StackPanel x:Name="EngineeringAddRow" Orientation="Horizontal" Spacing="8">
+                                        <TextBox x:Name="EngNewCommentBox"
+                                                    PlaceholderText="Add a comment..."
+                                                    Width="600"
+                                                    AcceptsReturn="True"
+                                                    TextWrapping="Wrap"/>
+                                        <Button Style="{StaticResource PrimaryButton}"
+                                                Click="AddEngineeringComment_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <SymbolIcon Symbol="Add"/>
+                                                <TextBlock Text="Add"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </ScrollViewer>
+                </TabViewItem>
+
+
+                <!-- ========== Purchasing ========== -->
+                <TabViewItem Header="Purchasing" IsClosable="False">
+                    <ScrollViewer>
+                        <Border Background="{StaticResource CardBrush}"
+                CornerRadius="12"
+                BorderBrush="{StaticResource DividerBrush}"
+                BorderThickness="1"
+                Padding="16"
+                HorizontalAlignment="Stretch"
+                Margin="0">
+                            <!-- 220 label / * value -->
+                            <Grid MaxWidth="1200" ColumnSpacing="16" RowSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- rows: 0..3 fields + 4 notes -->
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 0 PCB bekräftat -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 1 Material bekräftat -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 2 PCB-ritning -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 3 Pastafil -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 4 Notes -->
+                                </Grid.RowDefinitions>
+
+                                <!-- Labels -->
+                                <TextBlock Grid.Row="0" Grid.Column="0"
+                           Text="PCB bekräftat leveransdatum"
+                           Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0"
+                           Text="Material bekräftat leveransdatum"
+                           Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0"
+                           Text="PCB-ritning"
+                           Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0"
+                           Text="Pastafil"
+                           Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="4" Grid.Column="0"
+                           Text="Notes"
+                           FontWeight="SemiBold"/>
+
+                                <!-- READ values -->
+                                <TextBlock x:Name="PurchRead_PcbDate"
+                           Grid.Row="0" Grid.Column="1"
+                           Text="{Binding PurchasingPcbEta, Converter={StaticResource DateTimeToStringConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+                                <TextBlock x:Name="PurchRead_MaterialDate"
+                           Grid.Row="1" Grid.Column="1"
+                           Text="{Binding PurchasingMaterialsEta, Converter={StaticResource DateTimeToStringConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+                                <TextBlock x:Name="PurchRead_PcbDrawing"
+                           Grid.Row="2" Grid.Column="1"
+                           Text="{Binding PurchasingPcbDrawingReceived, Converter={StaticResource BoolToWaitingReceivedConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+                                <TextBlock x:Name="PurchRead_PasteFile"
+                           Grid.Row="3" Grid.Column="1"
+                           Text="{Binding PurchasingPasteFileReceived, Converter={StaticResource BoolToWaitingReceivedConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <DatePicker x:Name="PurchEdit_PcbDate"
+            Grid.Row="0" Grid.Column="1"
+            Date="{Binding PurchasingPcbEta, Mode=TwoWay, Converter={StaticResource DateToOffsetConverter}}"
+            Visibility="Collapsed"/>
+
+                                <DatePicker x:Name="PurchEdit_MaterialDate"
+            Grid.Row="1" Grid.Column="1"
+            Date="{Binding PurchasingMaterialsEta, Mode=TwoWay, Converter={StaticResource DateToOffsetConverter}}"
+            Visibility="Collapsed"/>
+
+                                <ToggleSwitch x:Name="PurchEdit_PcbDrawing"
+              Grid.Row="2" Grid.Column="1"
+              IsOn="{Binding PurchasingPcbDrawingReceived, Mode=TwoWay}"
+              OnContent="Mottagen" OffContent="Väntar"
+              Visibility="Collapsed"/>
+
+                                <ToggleSwitch x:Name="PurchEdit_PasteFile"
+              Grid.Row="3" Grid.Column="1"
+              IsOn="{Binding PurchasingPasteFileReceived, Mode=TwoWay}"
+              OnContent="Mottagen" OffContent="Väntar"
+              Visibility="Collapsed"/>
+
+                                <!-- Edit-mode hint (Row 4 like others) -->
+                                <TextBlock x:Name="PurchasingNotesHint"
+                           Grid.Row="4" Grid.Column="1"
+                           Text="Add comments in view mode (Notes row)."
+                           Visibility="Collapsed"
+                           Opacity="0.7"
+                           Style="{StaticResource RowEditorBase}"/>
+
+                                <!-- Notes thread -->
+                                <StackPanel x:Name="PurchasingNotesPanel" Grid.Row="4" Grid.Column="1" Spacing="8" Margin="0,8,0,24">
+                                    <ListView ItemsSource="{x:Bind PurchasingComments}" SelectionMode="None">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate x:DataType="models:ItemComment">
+                                                <Border Background="{StaticResource RowBrush}"
+                                        CornerRadius="8"
+                                        Padding="10"
+                                        Margin="0,6,0,0"
+                                        BorderBrush="{StaticResource DividerBrush}"
+                                        BorderThickness="1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Spacing="4">
+                                                            <TextBlock>
+                                                <Run Text="{x:Bind Author}"/>
+                                                <Run Text=" · "/>
+                                                <Run Text="{x:Bind CreatedAt, Converter={StaticResource DateTimeToStringConverter}}"/>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+
+                                                        <Button Grid.Column="1"
+                                                Click="DeleteComment_Click"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                ToolTipService.ToolTip="Delete">
+                                                            <SymbolIcon Symbol="Delete"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+
+                                    <!-- Add comment row -->
+                                    <StackPanel x:Name="PurchasingAddRow" Orientation="Horizontal" Spacing="8">
+                                        <TextBox x:Name="PurchNewCommentBox"
+                                 PlaceholderText="Add a comment..."
+                                 Width="600"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"/>
+                                        <Button Style="{StaticResource PrimaryButton}"
+                                Click="AddPurchasingComment_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <SymbolIcon Symbol="Add"/>
+                                                <TextBlock Text="Add"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Row dividers -->
+                                <Rectangle x:Name="PurchSep0" Grid.Row="0" Grid.ColumnSpan="2" Height="1"
+                           Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="PurchSep1" Grid.Row="1" Grid.ColumnSpan="2" Height="1"
+                           Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="PurchSep2" Grid.Row="2" Grid.ColumnSpan="2" Height="1"
+                           Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="PurchSep3" Grid.Row="3" Grid.ColumnSpan="2" Height="1"
+                           Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                            </Grid>
+                        </Border>
+                    </ScrollViewer>
+                </TabViewItem>
+
+
+                <!-- ========== Production ========== -->
+                <TabViewItem Header="Production" IsClosable="False">
+                    <ScrollViewer>
+                        <Border Background="{StaticResource CardBrush}"
+                CornerRadius="12"
+                BorderBrush="{StaticResource DividerBrush}"
+                BorderThickness="1"
+                Padding="16"
+                HorizontalAlignment="Stretch"
+                Margin="0">
+
+                            <!-- Same 220 / * layout -->
+                            <Grid MaxWidth="1200" ColumnSpacing="16" RowSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- rows: 0..7 fields + 8 notes -->
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 0 Startdatum -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 1 TO-nummer -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 2 SMT primärsida -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 3 SMT sekundärsida -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 4 Prep -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 5 THT -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 6 Eftermontering -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 7 Test -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 8 Notes -->
+                                </Grid.RowDefinitions>
+
+                                <!-- Labels -->
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Startdatum"         Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="TO-nummer"          Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="SMT primärsida"     Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="SMT sekundärsida"   Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Prep"               Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="THT"                Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="6" Grid.Column="0" Text="Eftermontering"     Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="7" Grid.Column="0" Text="Test"               Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="8" Grid.Column="0" Text="Notes"              FontWeight="SemiBold"/>
+
+                                <!-- READ values -->
+                                <TextBlock x:Name="ProdRead_Start"
+                           Grid.Row="0" Grid.Column="1"
+                           Text="{Binding ProductionStartDate, Converter={StaticResource DateTimeToStringConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <TextBlock x:Name="ProdRead_ToNumber"
+                           Grid.Row="1" Grid.Column="1"
+                           Text="{Binding ProductionToNumber}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <TextBlock x:Name="ProdRead_SmtPrim"
+                           Grid.Row="2" Grid.Column="1"
+                           Text="{Binding ProductionHasSmtPrimary, Converter={StaticResource BoolToYesNoConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <TextBlock x:Name="ProdRead_SmtSec"
+                           Grid.Row="3" Grid.Column="1"
+                           Text="{Binding ProductionHasSmtSecondary, Converter={StaticResource BoolToYesNoConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <TextBlock x:Name="ProdRead_Prep"
+                           Grid.Row="4" Grid.Column="1"
+                           Text="{Binding ProductionHasPrep, Converter={StaticResource BoolToYesNoConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <TextBlock x:Name="ProdRead_Tht"
+                           Grid.Row="5" Grid.Column="1"
+                           Text="{Binding ProductionHasTht, Converter={StaticResource BoolToYesNoConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <TextBlock x:Name="ProdRead_Efter"
+                           Grid.Row="6" Grid.Column="1"
+                           Text="{Binding ProductionHasEftermontering, Converter={StaticResource BoolToYesNoConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <TextBlock x:Name="ProdRead_Test"
+                           Grid.Row="7" Grid.Column="1"
+                           Text="{Binding ProductionHasTest, Converter={StaticResource BoolToYesNoConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <!-- EDIT controls (hidden by default) -->
+                                <DatePicker x:Name="ProdEdit_Start"
+                            Grid.Row="0" Grid.Column="1"
+                            Date="{Binding ProductionStartDate, Mode=TwoWay, Converter={StaticResource DateToOffsetConverter}}"
+                            Visibility="Collapsed"/>
+
+                                <TextBox x:Name="ProdEdit_ToNumber"
+                         Grid.Row="1" Grid.Column="1"
+                         Text="{Binding ProductionToNumber, Mode=TwoWay}"
+                         Visibility="Collapsed"
+                         Style="{StaticResource RowEditorBase}"/>
+
+                                <ToggleSwitch x:Name="ProdEdit_SmtPrim"
+                              Grid.Row="2" Grid.Column="1"
+                              IsOn="{Binding ProductionHasSmtPrimary, Mode=TwoWay}"
+                              OnContent="Ja" OffContent="Nej"
+                              Visibility="Collapsed"/>
+
+                                <ToggleSwitch x:Name="ProdEdit_SmtSec"
+                              Grid.Row="3" Grid.Column="1"
+                              IsOn="{Binding ProductionHasSmtSecondary, Mode=TwoWay}"
+                              OnContent="Ja" OffContent="Nej"
+                              Visibility="Collapsed"/>
+
+                                <ToggleSwitch x:Name="ProdEdit_Prep"
+                              Grid.Row="4" Grid.Column="1"
+                              IsOn="{Binding ProductionHasPrep, Mode=TwoWay}"
+                              OnContent="Ja" OffContent="Nej"
+                              Visibility="Collapsed"/>
+
+                                <ToggleSwitch x:Name="ProdEdit_Tht"
+                              Grid.Row="5" Grid.Column="1"
+                              IsOn="{Binding ProductionHasTht, Mode=TwoWay}"
+                              OnContent="Ja" OffContent="Nej"
+                              Visibility="Collapsed"/>
+
+                                <ToggleSwitch x:Name="ProdEdit_Efter"
+                              Grid.Row="6" Grid.Column="1"
+                              IsOn="{Binding ProductionHasEftermontering, Mode=TwoWay}"
+                              OnContent="Ja" OffContent="Nej"
+                              Visibility="Collapsed"/>
+
+                                <ToggleSwitch x:Name="ProdEdit_Test"
+                              Grid.Row="7" Grid.Column="1"
+                              IsOn="{Binding ProductionHasTest, Mode=TwoWay}"
+                              OnContent="Ja" OffContent="Nej"
+                              Visibility="Collapsed"/>
+
+                                <!-- Edit-mode hint (hide thread while editing) -->
+                                <TextBlock x:Name="ProductionNotesHint"
+                           Grid.Row="8" Grid.Column="1"
+                           Text="Add comments in view mode (Notes row)."
+                           Visibility="Collapsed"
+                           Opacity="0.7"
+                           Style="{StaticResource RowEditorBase}"/>
+
+                                <!-- Notes thread -->
+                                <StackPanel x:Name="ProductionNotesPanel" Grid.Row="8" Grid.Column="1" Spacing="8" Margin="0,8,0,24">
+                                    <ListView ItemsSource="{x:Bind ProductionComments}" SelectionMode="None">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate x:DataType="models:ItemComment">
+                                                <Border Background="{StaticResource RowBrush}"
+                                        CornerRadius="8"
+                                        Padding="10"
+                                        Margin="0,6,0,0"
+                                        BorderBrush="{StaticResource DividerBrush}"
+                                        BorderThickness="1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Spacing="4">
+                                                            <TextBlock>
+                                                <Run Text="{x:Bind Author}"/>
+                                                <Run Text=" · "/>
+                                                <Run Text="{x:Bind CreatedAt, Converter={StaticResource DateTimeToStringConverter}}"/>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+
+                                                        <Button Grid.Column="1"
+                                                Click="DeleteComment_Click"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                ToolTipService.ToolTip="Delete">
+                                                            <SymbolIcon Symbol="Delete"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+
+                                    <!-- Add comment -->
+                                    <StackPanel x:Name="ProductionAddRow" Orientation="Horizontal" Spacing="8">
+                                        <TextBox x:Name="ProdNewCommentBox"
+                                 PlaceholderText="Add a comment..."
+                                 Width="600"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"/>
+                                        <Button Style="{StaticResource PrimaryButton}"
+                                Click="AddProductionComment_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <SymbolIcon Symbol="Add"/>
+                                                <TextBlock Text="Add"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Row dividers (hide these in edit mode) -->
+                                <Rectangle x:Name="ProdSep0" Grid.Row="0" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="ProdSep1" Grid.Row="1" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="ProdSep2" Grid.Row="2" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="ProdSep3" Grid.Row="3" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="ProdSep4" Grid.Row="4" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="ProdSep5" Grid.Row="5" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="ProdSep6" Grid.Row="6" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="ProdSep7" Grid.Row="7" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+
+                            </Grid>
+                        </Border>
+                    </ScrollViewer>
+                </TabViewItem>
+
+                <!-- ========== Planning ========== -->
+                <TabViewItem Header="Planning" IsClosable="False">
+                    <ScrollViewer>
+                        <Border Background="{StaticResource CardBrush}"
+                CornerRadius="12"
+                BorderBrush="{StaticResource DividerBrush}"
+                BorderThickness="1"
+                Padding="16"
+                HorizontalAlignment="Stretch"
+                Margin="0">
+
+                            <!-- Same layout as others: 220 label / * value -->
+                            <Grid MaxWidth="1200" ColumnSpacing="16" RowSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- rows: 0..5 fields + 6 notes -->
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 0 Order från kund -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 1 Bekräftat leveransdatum -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 2 Excess material -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 3 Levererat antal -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 4 Fakturerad -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 5 Ägare -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 6 Notes -->
+                                </Grid.RowDefinitions>
+
+                                <!-- Labels -->
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Order från kund"                   Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Bekräftat leveransdatum"           Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Excess material"                   Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Levererat antal"                   Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Fakturerad"                        Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Ägare"                             Style="{StaticResource RowCellText}" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="6" Grid.Column="0" Text="Notes"                             FontWeight="SemiBold"/>
+
+                                <!-- READ values -->
+                                <TextBlock x:Name="PlanRead_OrderReceived"
+                           Grid.Row="0" Grid.Column="1"
+                           Text="{Binding PlanningOrderReceived, Converter={StaticResource BoolToYesNoConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+                                <TextBlock x:Name="PlanRead_ConfirmedDate"
+                           Grid.Row="1" Grid.Column="1"
+                           Text="{Binding PlanningConfirmedDeliveryDate, Converter={StaticResource DateTimeToStringConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+                                <TextBlock x:Name="PlanRead_Excess"
+                           Grid.Row="2" Grid.Column="1"
+                           Text="{Binding PlanningExcessMaterial, Converter={StaticResource BoolToYesNoConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <!-- Planning — READ delivered qty + progress -->
+                                <StackPanel x:Name="PlanRead_DeliveredQty"
+                                            Grid.Row="3" Grid.Column="1"
+                                            Orientation="Vertical" Spacing="4"
+                                            Margin="0,0,0,8">
+                                    <TextBlock>
+                                    <Run Text="{Binding PlanningDeliveredQty}"/>
+                                    <Run Text=" av "/>
+                                    <Run Text="{Binding Quantity}"/>
+                                    <Run Text=" möjliga"/>
+                                    </TextBlock>
+                                </StackPanel>
+
+
+                                <TextBlock x:Name="PlanRead_Invoiced"
+                           Grid.Row="4" Grid.Column="1"
+                           Text="{Binding PlanningInvoiced, Converter={StaticResource BoolToYesNoConverter}}"
+                           Style="{StaticResource RowCellText}"/>
+                                <TextBlock x:Name="PlanRead_Owner"
+                           Grid.Row="5" Grid.Column="1"
+                           Text="{Binding PlanningOwner}"
+                           Style="{StaticResource RowCellText}"/>
+
+                                <!-- EDIT controls (collapsed by default) -->
+                                <ToggleSwitch x:Name="PlanEdit_OrderReceived"
+                              Grid.Row="0" Grid.Column="1"
+                              IsOn="{Binding PlanningOrderReceived, Mode=TwoWay}"
+                              OnContent="Mottagen" OffContent="Ej mottagen"
+                              Visibility="Collapsed"/>
+                                <DatePicker x:Name="PlanEdit_ConfirmedDate"
+                            Grid.Row="1" Grid.Column="1"
+                            Date="{Binding PlanningConfirmedDeliveryDate, Mode=TwoWay, Converter={StaticResource DateToOffsetConverter}}"
+                            MinHeight="30"
+                            Visibility="Collapsed"/>
+                                <ToggleSwitch x:Name="PlanEdit_Excess"
+                              Grid.Row="2" Grid.Column="1"
+                              IsOn="{Binding PlanningExcessMaterial, Mode=TwoWay}"
+                              OnContent="Ja" OffContent="Nej"
+                              Visibility="Collapsed"/>
+                                <NumberBox x:Name="PlanEdit_DeliveredQty"
+           Grid.Row="3" Grid.Column="1"
+           Minimum="0" SmallChange="1"
+           Value="{Binding PlanningDeliveredQty, Mode=TwoWay}"
+           ValueChanged="PlanEdit_DeliveredQty_ValueChanged"
+           Visibility="Collapsed"/>
+                                <ToggleSwitch x:Name="PlanEdit_Invoiced"
+                              Grid.Row="4" Grid.Column="1"
+                              IsOn="{Binding PlanningInvoiced, Mode=TwoWay}"
+                              OnContent="Ja" OffContent="Nej"
+                              Visibility="Collapsed"/>
+                                <AutoSuggestBox x:Name="PlanEdit_Owner"
+                                Grid.Row="5" Grid.Column="1"
+                                Text="{Binding PlanningOwner, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                PlaceholderText="Type a name..."
+                                ItemsSource="{x:Bind OwnerSuggestions, Mode=OneWay}"
+                                TextChanged="OwnerBox_TextChanged"
+                                SuggestionChosen="OwnerBox_SuggestionChosen"
+                                QuerySubmitted="OwnerBox_QuerySubmitted"
+                                LostFocus="OwnerBox_LostFocus"
+                                Visibility="Collapsed"/>
+
+                                <!-- Edit-mode hint (hide in read mode) -->
+                                <TextBlock x:Name="PlanningNotesHint"
+                           Grid.Row="6" Grid.Column="1"
+                           Text="Add comments in view mode (Notes row)."
+                           Visibility="Collapsed"
+                           Opacity="0.7"
+                           Style="{StaticResource RowEditorBase}"/>
+
+                                <!-- Notes (thread) -->
+                                <StackPanel x:Name="PlanningNotesPanel" Grid.Row="6" Grid.Column="1" Spacing="8" Margin="0,8,0,24">
+                                    <ListView ItemsSource="{x:Bind PlanningComments}" SelectionMode="None">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate x:DataType="models:ItemComment">
+                                                <Border Background="{StaticResource RowBrush}"
+                                        CornerRadius="8"
+                                        Padding="10"
+                                        Margin="0,6,0,0"
+                                        BorderBrush="{StaticResource DividerBrush}"
+                                        BorderThickness="1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Spacing="4">
+                                                            <TextBlock>
+                                                <Run Text="{x:Bind Author}"/>
+                                                <Run Text=" · "/>
+                                                <Run Text="{x:Bind CreatedAt, Converter={StaticResource DateTimeToStringConverter}}"/>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1"
+                                                Click="DeleteComment_Click"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                ToolTipService.ToolTip="Delete">
+                                                            <SymbolIcon Symbol="Delete"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+
+                                    <!-- Add comment -->
+                                    <StackPanel x:Name="PlanningAddRow" Orientation="Horizontal" Spacing="8">
+                                        <TextBox x:Name="PlanNewCommentBox"
+                                 PlaceholderText="Add a comment..."
+                                 Width="600"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"/>
+                                        <Button Style="{StaticResource PrimaryButton}"
+                                Click="AddPlanningComment_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <SymbolIcon Symbol="Add"/>
+                                                <TextBlock Text="Add"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Row dividers (hide in edit mode via TogglePlanningEditors) -->
+                                <Rectangle x:Name="PlanSep0" Grid.Row="0" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="PlanSep1" Grid.Row="1" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="PlanSep2" Grid.Row="2" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="PlanSep3" Grid.Row="3" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="PlanSep4" Grid.Row="4" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+                                <Rectangle x:Name="PlanSep5" Grid.Row="5" Grid.ColumnSpan="2" Height="1" Fill="{StaticResource DividerBrush}" VerticalAlignment="Bottom" Margin="0,6,0,0"/>
+
+                            </Grid>
+                        </Border>
+                    </ScrollViewer>
+                </TabViewItem>
+            </TabView>
+        </Border>
+    </Grid>
+</Page>

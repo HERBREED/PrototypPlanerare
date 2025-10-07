@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PrototypPlanerare (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "PrototypPlanerare (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

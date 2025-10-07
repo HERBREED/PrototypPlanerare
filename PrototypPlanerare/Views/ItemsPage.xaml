@@ -1,0 +1,187 @@
+<Page
+    x:Class="PrototypPlanerare.Views.ItemsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:conv="using:PrototypPlanerare.Converters"
+    mc:Ignorable="d"
+    RequestedTheme="Light">
+
+    <!-- Converters -->
+    <Page.Resources>
+        <conv:DateToStringConverter x:Key="DateToStringConverter"/>
+        <conv:StatusToBrushConverter x:Key="StatusToBrushConverter"/>
+
+        <!-- NEW: show/hide menu items based on IsArchived -->
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:InverseBoolToVisibilityConverter x:Key="BoolToVisibilityInverse"/>
+    </Page.Resources>
+
+    <Grid Padding="12">
+        <StackPanel Spacing="8">
+
+            <!-- Page title -->
+            <TextBlock Text="Aktiva poster" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+            <!-- Top bar: search + sort + show archived (left) | New item (right) -->
+            <Grid ColumnSpacing="8" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- LEFT -->
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBox Width="360"
+                             PlaceholderText="Search type, customer, product, or status"
+                             Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             MinHeight="40"/>
+
+                    <ComboBox Width="200" MinHeight="40"
+                              SelectedIndex="{Binding SortIndex, Mode=TwoWay}">
+                        <ComboBoxItem>Sort: Date (newest)</ComboBoxItem>
+                        <ComboBoxItem>Sort: Date (oldest)</ComboBoxItem>
+                        <ComboBoxItem>Sort: Customer</ComboBoxItem>
+                        <ComboBoxItem>Sort: Product</ComboBoxItem>
+                        <ComboBoxItem>Sort: Status</ComboBoxItem>
+                    </ComboBox>
+
+                    <!-- NEW: show archived toggle -->
+                    <CheckBox Content="Show archived"
+          VerticalAlignment="Center"
+          IsChecked="{Binding ShowArchived, Mode=TwoWay}"/>
+                </StackPanel>
+
+                <!-- RIGHT -->
+                <Button Grid.Column="1"
+                        Style="{StaticResource PrimaryButton}"
+                        Click="NewItem_Click"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <SymbolIcon Symbol="Add"/>
+                        <TextBlock Text="New item"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- Header row -->
+            <Border Background="{StaticResource HeaderBrush}"
+                    CornerRadius="8"
+                    Padding="8,6"
+                    BorderBrush="{StaticResource DividerBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="160"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="80"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Date"     Grid.Column="0" FontWeight="SemiBold"/>
+                    <TextBlock Text="Type"     Grid.Column="1" FontWeight="SemiBold"/>
+                    <TextBlock Text="Customer" Grid.Column="2" FontWeight="SemiBold"/>
+                    <TextBlock Text="Product"  Grid.Column="3" FontWeight="SemiBold"/>
+                    <TextBlock Text="Status"   Grid.Column="4" FontWeight="SemiBold"/>
+                    <TextBlock Text="Qty"      Grid.Column="5" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                </Grid>
+            </Border>
+
+            <!-- Items -->
+            <ListView x:Name="ItemsList"
+                      ItemsSource="{Binding Items}"
+                      SelectionMode="None"
+                      IsItemClickEnabled="True"
+                      ItemClick="ListView_ItemClick"
+                      Padding="0">
+
+                <!-- Remove default item padding & stretch row content; add right-click menu -->
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="ContextFlyout">
+                            <Setter.Value>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="Open" Icon="OpenFile"
+                      Click="OpenItem_Click"
+                      CommandParameter="{Binding}"/>
+
+                                    <MenuFlyoutSeparator/>
+
+                                    <MenuFlyoutItem Text="Archive" Icon="SaveLocal"
+                      Click="ArchiveItem_Click"
+                      CommandParameter="{Binding}"
+                      Visibility="{Binding IsArchived,
+                                   Converter={StaticResource BoolToVisibilityInverse}}"/>
+
+                                    <MenuFlyoutItem Text="Unarchive" Icon="Refresh"
+                      Click="UnarchiveItem_Click"
+                      CommandParameter="{Binding}"
+                      Visibility="{Binding IsArchived,
+                                   Converter={StaticResource BoolToVisibility}}"/>
+
+                                    <MenuFlyoutSeparator/>
+
+                                    <MenuFlyoutItem Text="Delete permanently…" Icon="Delete"
+                      Foreground="Red"
+                      Click="DeleteItem_Click"
+                      CommandParameter="{Binding}"/>
+                                </MenuFlyout>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListView.ItemContainerStyle>
+
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <!-- Card-like row -->
+                        <Border Background="{StaticResource RowBrush}"
+                                CornerRadius="8"
+                                Padding="0"
+                                Margin="0,6,0,0"
+                                BorderBrush="{StaticResource DividerBrush}"
+                                BorderThickness="1">
+                            <Grid MinHeight="40" Padding="8,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="160"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding Date, Converter={StaticResource DateToStringConverter}}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Type}"      VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{Binding Customer}"  VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="{Binding Product}"   VerticalAlignment="Center"/>
+
+                                <!-- Slimmer, centered status chip -->
+                                <Border Grid.Column="4"
+                                        CornerRadius="10"
+                                        VerticalAlignment="Center"
+                                        Background="{Binding Status, Converter={StaticResource StatusToBrushConverter}}">
+                                    <TextBlock Text="{Binding Status}"
+                                               Foreground="White"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               Margin="8,2"/>
+                                </Border>
+
+                                <TextBlock Grid.Column="5" Text="{Binding Quantity}"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </StackPanel>
+    </Grid>
+</Page>

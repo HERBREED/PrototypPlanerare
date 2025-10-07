@@ -1,0 +1,113 @@
+<ContentDialog
+    x:Class="PrototypPlanerare.Views.Dialogs.NewItemDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="New item"
+    PrimaryButtonText="Create"
+    SecondaryButtonText="Cancel"
+    PrimaryButtonClick="ContentDialog_PrimaryButtonClick"
+    CornerRadius="12">
+
+    <ContentDialog.PrimaryButtonStyle>
+        <Style TargetType="Button" BasedOn="{StaticResource FlatBlueButton2}"/>
+    </ContentDialog.PrimaryButtonStyle>
+    
+    <ContentDialog.SecondaryButtonStyle>
+        <Style TargetType="Button" BasedOn="{StaticResource FlatBlueButton}"/>
+    </ContentDialog.SecondaryButtonStyle>
+
+    <StackPanel Spacing="12" Width="560">
+        <Grid ColumnSpacing="12" RowSpacing="8">
+            <!-- 2 columns: labels + editors -->
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Rows (0..9). Date is removed (we auto-fill today in code). -->
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <!-- 0 Type         -->
+                <RowDefinition Height="Auto"/>
+                <!-- 1 Status       -->
+                <RowDefinition Height="Auto"/>
+                <!-- 2 Owner        -->
+                <RowDefinition Height="Auto"/>
+                <!-- 3 ECO          (ECO only) -->
+                <RowDefinition Height="Auto"/>
+                <!-- 4 ÅO           (ECO only) -->
+                <RowDefinition Height="Auto"/>
+                <!-- 5 Customer     -->
+                <RowDefinition Height="Auto"/>
+                <!-- 6 Product      -->
+                <RowDefinition Height="Auto"/>
+                <!-- 7 Current Rev  (not PROTOTYPE) -->
+                <RowDefinition Height="Auto"/>
+                <!-- 8 New Rev      -->
+                <RowDefinition Height="Auto"/>
+                <!-- 9 Quantity     -->
+            </Grid.RowDefinitions>
+
+            <!-- Labels -->
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Type"        VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Status"      VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Owner"       VerticalAlignment="Center"/>
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="ECO"         VerticalAlignment="Center"
+                       Visibility="{Binding EcoAoVisibility}"/>
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="ÄO"          VerticalAlignment="Center"
+                       Visibility="{Binding EcoAoVisibility}"/>
+
+            <TextBlock Grid.Row="5" Grid.Column="0" Text="Customer"    VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="6" Grid.Column="0" Text="Product"     VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="7" Grid.Column="0" Text="Current Rev" VerticalAlignment="Center"
+                       Visibility="{Binding CurrentRevVisibility}"/>
+            <TextBlock Grid.Row="8" Grid.Column="0" Text="New Rev"     VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="9" Grid.Column="0" Text="Quantity"    VerticalAlignment="Center"/>
+
+            <!-- Editors -->
+            <ComboBox Grid.Row="0" Grid.Column="1" MinHeight="36"
+                      SelectedItem="{Binding Type, Mode=TwoWay}">
+                <x:String>ECO</x:String>
+                <x:String>PROTOTYPE</x:String>
+                <x:String>OTHER</x:String>
+            </ComboBox>
+
+            <ComboBox Grid.Row="1" Grid.Column="1" MinHeight="36"
+                      SelectedItem="{Binding Status, Mode=TwoWay}">
+                <x:String>NotStarted</x:String>
+                <x:String>InProgress</x:String>
+                <x:String>Blocked</x:String>
+                <x:String>Done</x:String>
+            </ComboBox>
+
+            <TextBox Grid.Row="2" Grid.Column="1" MinHeight="36"
+         Text="{Binding Owner, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <TextBox Grid.Row="3" Grid.Column="1" MinHeight="36"
+                     Text="{Binding EcoNumber, Mode=TwoWay}"
+                     Visibility="{Binding EcoAoVisibility}"/>
+            <TextBox Grid.Row="4" Grid.Column="1" MinHeight="36"
+                     Text="{Binding AoNumber, Mode=TwoWay}"
+                     Visibility="{Binding EcoAoVisibility}"/>
+
+            <TextBox Grid.Row="5" Grid.Column="1" MinHeight="36"
+                     Text="{Binding Customer, Mode=TwoWay}"/>
+            <TextBox Grid.Row="6" Grid.Column="1" MinHeight="36"
+                     Text="{Binding Product, Mode=TwoWay}"/>
+
+            <TextBox Grid.Row="7" Grid.Column="1" MinHeight="36"
+                     Text="{Binding CurrentRevision, Mode=TwoWay}"
+                     Visibility="{Binding CurrentRevVisibility}"/>
+
+            <TextBox Grid.Row="8" Grid.Column="1" MinHeight="36"
+                     Text="{Binding NewRevision, Mode=TwoWay}"/>
+
+            <NumberBox Grid.Row="9" Grid.Column="1" MinHeight="36"
+                       Minimum="0" SmallChange="1"
+                       Value="{Binding Quantity, Mode=TwoWay}"/>
+        </Grid>
+
+        <InfoBar x:Name="ErrorBar" IsOpen="False" Severity="Error"/>
+    </StackPanel>
+</ContentDialog>
